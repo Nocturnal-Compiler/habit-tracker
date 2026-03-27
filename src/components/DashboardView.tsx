@@ -50,7 +50,7 @@ export default function DashboardView({ initialHabits }: { initialHabits: any[] 
       <FluidBackground />
       <Sidebar currentView={view} setView={setView} />
       
-      <main className="flex-1 ml-0 md:ml-72 p-6 md:p-12 lg:p-24 relative z-10 overflow-y-auto backdrop-blur-2xl bg-white/[0.02] border-l border-white/[0.05] min-h-screen">
+      <main className="flex-1 ml-0 md:ml-72 p-6 md:p-12 lg:p-24 relative z-10 overflow-y-auto backdrop-blur-3xl bg-black/20 min-h-screen">
         <div className="max-w-5xl mx-auto">
           <header className="mb-16 mt-10">
             <AnimatedTitle 
