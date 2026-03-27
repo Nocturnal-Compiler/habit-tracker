@@ -70,11 +70,11 @@ export default function FluidBackground() {
   }, [mouseX, mouseY]);
 
   return (
-    <div className="fixed inset-0 z-[-1] bg-[#030303] pointer-events-none overflow-hidden">
+    <div className="fixed inset-0 z-0 bg-[#030303] pointer-events-none overflow-hidden">
       {/* Massive Fluid Background Layer */}
       <svg className="hidden pointer-events-none absolute">
         <defs>
-          <filter id="gooey">
+          <filter id="main-gooey">
             <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur" />
             <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
             <feBlend in="SourceGraphic" in2="gooey" />
@@ -85,42 +85,42 @@ export default function FluidBackground() {
       {/* Autonomous flowing glowing liquid blobs container */}
       <div
         className="absolute inset-0 z-0 pointer-events-none overflow-hidden"    
-        style={{ filter: "url(#gooey) drop-shadow(0 0 15px rgba(255,255,255,0.4))" }}
+        style={{ filter: "url(#main-gooey) drop-shadow(0 0 15px rgba(255,255,255,0.4))" }}
       >
         {/* Huge ambient mass blobs */}
         <motion.div
           animate={{ x: [0, 50, -20, 0], y: [0, 80, -40, 0] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[10%] left-[10%] w-64 h-64 bg-white rounded-full opacity-[0.4]"
+          className="absolute top-[10%] left-[10%] w-64 h-64 bg-white rounded-full opacity-80"
         />
         <motion.div
           animate={{ x: [0, -60, 40, 0], y: [0, -100, 60, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-1/4 right-[10%] w-80 h-96 bg-white rounded-full opacity-[0.3]"
+          className="absolute top-1/4 right-[10%] w-80 h-96 bg-white rounded-full opacity-80"
         />
         <motion.div
           animate={{ x: [0, 80, -50, 0], y: [0, -40, 100, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-[10%] left-[30%] w-72 h-72 bg-white rounded-full opacity-[0.3]"
+          className="absolute bottom-[10%] left-[30%] w-72 h-72 bg-white rounded-full opacity-80"
         />
 
         {/* Mouse tracking fluid blobs */}
         <motion.div
           style={{ x: springX1, y: springY1, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-16 h-16 bg-white rounded-full opacity-[0.5]"
+          className="absolute top-0 left-0 w-48 h-48 bg-white rounded-full opacity-80"
         />
         <motion.div
           style={{ x: springX2, y: springY2, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-24 h-24 bg-white rounded-full opacity-[0.3]"
+          className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full opacity-80"
         />
         <motion.div
           style={{ x: springX3, y: springY3, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-36 h-36 bg-white rounded-full opacity-[0.6]"
+          className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full opacity-80"
         />
       </div>
 
       {/* Frosted Glass Overlay */}
-      <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-black/30 backdrop-blur-3xl pointer-events-none" />
       <div 
         className="absolute inset-0 opacity-[0.03] z-10 mix-blend-overlay" 
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
@@ -128,3 +128,5 @@ export default function FluidBackground() {
     </div>
   );
 }
+
+

@@ -46,7 +46,7 @@ export default function DashboardView({ initialHabits }: { initialHabits: any[] 
   const todayIso = format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="flex min-h-screen text-zinc-50 relative overflow-hidden bg-[#030303]">
+    <div className="flex min-h-screen text-zinc-50 relative overflow-hidden">
       <FluidBackground />
       <Sidebar currentView={view} setView={setView} />
 
