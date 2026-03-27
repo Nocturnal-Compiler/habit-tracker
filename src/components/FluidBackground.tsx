@@ -91,36 +91,36 @@ export default function FluidBackground() {
         <motion.div
           animate={{ x: [0, 50, -20, 0], y: [0, 80, -40, 0] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[10%] left-[10%] w-64 h-64 bg-white rounded-full opacity-80"
+          className="absolute top-[10%] left-[10%] w-32 h-32 bg-white rounded-full opacity-[0.4]"
         />
         <motion.div
           animate={{ x: [0, -60, 40, 0], y: [0, -100, 60, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-1/4 right-[10%] w-80 h-96 bg-white rounded-full opacity-80"
+          className="absolute top-1/4 right-[10%] w-40 h-48 bg-white rounded-full opacity-[0.3]"
         />
         <motion.div
           animate={{ x: [0, 80, -50, 0], y: [0, -40, 100, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-[10%] left-[30%] w-72 h-72 bg-white rounded-full opacity-80"
+          className="absolute bottom-[10%] left-[30%] w-36 h-36 bg-white rounded-full opacity-[0.3]"
         />
 
         {/* Mouse tracking fluid blobs */}
         <motion.div
           style={{ x: springX1, y: springY1, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-48 h-48 bg-white rounded-full opacity-80"
+          className="absolute top-0 left-0 w-16 h-16 bg-white rounded-full opacity-[0.5]"
         />
         <motion.div
           style={{ x: springX2, y: springY2, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full opacity-80"
+          className="absolute top-0 left-0 w-24 h-24 bg-white rounded-full opacity-[0.3]"
         />
         <motion.div
           style={{ x: springX3, y: springY3, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full opacity-80"
+          className="absolute top-0 left-0 w-12 h-12 bg-white rounded-full opacity-[0.6]"
         />
       </div>
 
       {/* Frosted Glass Overlay */}
-      <div className="absolute inset-0 z-10 bg-black/30 backdrop-blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-3xl pointer-events-none" />
       <div 
         className="absolute inset-0 opacity-[0.03] z-10 mix-blend-overlay" 
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
@@ -128,5 +128,8 @@ export default function FluidBackground() {
     </div>
   );
 }
+
+
+
 
 
