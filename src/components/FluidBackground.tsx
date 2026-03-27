@@ -1,111 +1,126 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useSpring } from "framer-motion";
 
 export default function FluidBackground() {
-  const [windowSize, setWindowSize] = useState({ width: 1000, height: 1000 });
+  const [isHovered, setIsHovered] = useState(false);
   
-  useEffect(() => {
-    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Motion values for the cursor / fluid target
+  const mouseX = useMotionValue(typeof window !== "undefined" ? window.innerWidth / 2 : 500);
+  const mouseY = useMotionValue(typeof window !== "undefined" ? window.innerHeight / 2 : 500);
 
-  const mouseX = useMotionValue(windowSize.width / 2);
-  const mouseY = useMotionValue(windowSize.height / 2);
+  // Multiple spring configs for a trailing fluid / liquid merging effect
+  const springX1 = useSpring(mouseX, { stiffness: 80, damping: 15, mass: 1 });
+  const springY1 = useSpring(mouseY, { stiffness: 80, damping: 15, mass: 1 });
+
+  const springX2 = useSpring(mouseX, { stiffness: 50, damping: 20, mass: 2 });
+  const springY2 = useSpring(mouseY, { stiffness: 50, damping: 20, mass: 2 });
+
+  const springX3 = useSpring(mouseX, { stiffness: 30, damping: 25, mass: 3 });
+  const springY3 = useSpring(mouseY, { stiffness: 30, damping: 25, mass: 3 });
+
+  // Autonomous wandering when not hovered (smooth Lissajous curves)
+  useEffect(() => {
+    let animationFrameId: number;
+    let time = Math.random() * 100; // Random starting point
+
+    const animateFlow = () => {
+      if (!isHovered) {
+        time += 0.012; // Speed of the autonomous flow
+        const width = document.documentElement.clientWidth;
+        const height = window.innerHeight;
+        
+        // Complex smooth path
+        const x = (Math.sin(time) * 0.35 + 0.5) * width;
+        const y = (Math.cos(time * 0.7) * Math.sin(time * 0.5) * 0.35 + 0.5) * height;
+
+        mouseX.set(x);
+        mouseY.set(y);
+      }
+      animationFrameId = requestAnimationFrame(animateFlow);
+    };
+
+    animateFlow();
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isHovered, mouseX, mouseY]);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     const handleMouseMove = (e: MouseEvent) => {
+      setIsHovered(true);
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
+      
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setIsHovered(false), 2000); // Resume autonomous flow after 2s of inactivity
     };
+
+    const handleMouseLeave = () => setIsHovered(false);
+
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
+    
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
+      clearTimeout(timeout);
+    };
   }, [mouseX, mouseY]);
 
-  const smoothX = useSpring(mouseX, { damping: 50, stiffness: 300 });
-  const smoothY = useSpring(mouseY, { damping: 50, stiffness: 300 });
-
-  const offsetX1 = useTransform(smoothX, [0, windowSize.width], [-150, 150]);
-  const offsetY1 = useTransform(smoothY, [0, windowSize.height], [-150, 150]);
-
-  const offsetX2 = useTransform(smoothX, [0, windowSize.width], [200, -200]);
-  const offsetY2 = useTransform(smoothY, [0, windowSize.height], [200, -200]);
-
-  const offsetX3 = useTransform(smoothX, [0, windowSize.width], [-80, 80]);
-  const offsetY3 = useTransform(smoothY, [0, windowSize.height], [80, -80]);
-
-  const offsetX4 = useTransform(smoothX, [0, windowSize.width], [120, -120]);
-  const offsetY4 = useTransform(smoothY, [0, windowSize.height], [-120, 120]);
-
-  const offsetX5 = useTransform(smoothX, [0, windowSize.width], [-180, 180]);
-  const offsetY5 = useTransform(smoothY, [0, windowSize.height], [180, -180]);
-
   return (
-    <div className="fixed inset-0 z-[-1] bg-[#050505] pointer-events-none overflow-hidden">
-      {/* Gooey Filter Definition */}
+    <div className="fixed inset-0 z-[-1] bg-[#030303] pointer-events-none overflow-hidden">
+      {/* Massive Fluid Background Layer */}
       <svg className="hidden pointer-events-none absolute">
         <defs>
-          <filter id="main-gooey">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blur" />
-            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 35 -15" result="gooey" />
+          <filter id="gooey">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur" />
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
             <feBlend in="SourceGraphic" in2="gooey" />
           </filter>
         </defs>
       </svg>
 
-      {/* Glowing Liquid Orbs (White and dispersed) */}
+      {/* Autonomous flowing glowing liquid blobs container */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
-        style={{ filter: "url(#main-gooey) drop-shadow(0 0 15px rgba(255,255,255,0.4))" }}
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"    
+        style={{ filter: "url(#gooey) drop-shadow(0 0 15px rgba(255,255,255,0.4))" }}
       >
-        {/* Large ambient mass blobs */}
+        {/* Huge ambient mass blobs */}
         <motion.div
-          style={{ x: offsetX1, y: offsetY1 }}
           animate={{ x: [0, 50, -20, 0], y: [0, 80, -40, 0] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[10%] left-[20%] w-[25rem] h-[25rem] bg-white rounded-full opacity-[0.2]"
+          className="absolute top-[10%] left-[10%] w-64 h-64 bg-white rounded-full opacity-[0.4]"
         />
         <motion.div
-          style={{ x: offsetX2, y: offsetY2 }}
           animate={{ x: [0, -60, 40, 0], y: [0, -100, 60, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[30%] right-[10%] w-[30rem] h-[30rem] bg-white rounded-full opacity-[0.15]"
+          className="absolute top-1/4 right-[10%] w-80 h-96 bg-white rounded-full opacity-[0.3]"
         />
         <motion.div
-          style={{ x: offsetX3, y: offsetY3 }}
           animate={{ x: [0, 80, -50, 0], y: [0, -40, 100, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-[10%] left-[40%] w-[35rem] h-[35rem] bg-white rounded-full opacity-[0.1]"
-        />
-        <motion.div
-          style={{ x: offsetX4, y: offsetY4 }}
-          animate={{ x: [0, -40, 60, 0], y: [0, 50, -80, 0] }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[60%] left-[10%] w-[20rem] h-[20rem] bg-white rounded-full opacity-[0.2]"
-        />
-        <motion.div
-          style={{ x: offsetX5, y: offsetY5 }}
-          animate={{ x: [0, 70, -30, 0], y: [0, -60, 90, 0] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-[20%] right-[30%] w-[28rem] h-[28rem] bg-white rounded-full opacity-[0.15]"
+          className="absolute bottom-[10%] left-[30%] w-72 h-72 bg-white rounded-full opacity-[0.3]"
         />
 
-        {/* Small cursor tracking element */}
+        {/* Mouse tracking fluid blobs */}
         <motion.div
-          style={{ x: smoothX, y: smoothY, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full opacity-[0.3]"
+          style={{ x: springX1, y: springY1, translateX: "-50%", translateY: "-50%" }}
+          className="absolute top-0 left-0 w-16 h-16 bg-white rounded-full opacity-[0.5]"
         />
         <motion.div
-          style={{ x: smoothX, y: smoothY, translateX: "-50%", translateY: "-50%" }}
-          className="absolute top-0 left-0 w-48 h-48 bg-white rounded-full opacity-[0.1]"
+          style={{ x: springX2, y: springY2, translateX: "-50%", translateY: "-50%" }}
+          className="absolute top-0 left-0 w-24 h-24 bg-white rounded-full opacity-[0.3]"
+        />
+        <motion.div
+          style={{ x: springX3, y: springY3, translateX: "-50%", translateY: "-50%" }}
+          className="absolute top-0 left-0 w-36 h-36 bg-white rounded-full opacity-[0.6]"
         />
       </div>
 
-      {/* Global Frosted Glass Overlay for the background */}
-      <div className="absolute inset-0 z-10 bg-black/50 backdrop-blur-3xl pointer-events-none" />
+      {/* Frosted Glass Overlay */}
+      <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-3xl pointer-events-none" />
       <div 
         className="absolute inset-0 opacity-[0.03] z-10 mix-blend-overlay" 
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}

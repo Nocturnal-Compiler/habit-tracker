@@ -46,11 +46,11 @@ export default function DashboardView({ initialHabits }: { initialHabits: any[] 
   const todayIso = format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="flex min-h-screen text-zinc-50 relative overflow-hidden bg-black/50">
+    <div className="flex min-h-screen text-zinc-50 relative overflow-hidden bg-[#030303]">
       <FluidBackground />
       <Sidebar currentView={view} setView={setView} />
-      
-      <main className="flex-1 ml-0 md:ml-72 p-6 md:p-12 lg:p-24 relative z-10 overflow-y-auto backdrop-blur-3xl bg-black/20 min-h-screen">
+
+      <main className="flex-1 ml-0 md:ml-72 p-6 md:p-12 lg:p-24 relative z-10 overflow-y-auto min-h-screen">
         <div className="max-w-5xl mx-auto">
           <header className="mb-16 mt-10">
             <AnimatedTitle 
