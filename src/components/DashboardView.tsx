@@ -1,40 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import FluidBackground from "@/components/FluidBackground";
 import HabitCard from "@/components/HabitCard";
 import WeeklyView from "@/components/WeeklyView";
 import MonthlyView from "@/components/MonthlyView";
 import Sidebar from "@/components/Sidebar";
 import AnimatedTitle from "@/components/AnimatedTitle";
+import DeadlineTracker from "@/components/DeadlineTracker";
+import TodayTasks from "@/components/TodayTasks";
+import PomodoroTimer from "@/components/PomodoroTimer";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { createHabit } from "@/actions/habitActions";
 import { Plus } from "lucide-react";
+import type { DeadlineItem, PomodoroSettings, TodayTaskItem } from "@/actions/productivityActions";
 
 type ViewMode = 'today' | 'weekly' | 'monthly';
 
-export default function DashboardView({ initialHabits }: { initialHabits: any[] }) {
+type DashboardViewProps = {
+  initialHabits: any[];
+  initialDeadlines: DeadlineItem[];
+  initialTodayTasks: TodayTaskItem[];
+  initialPomodoroSettings: PomodoroSettings;
+};
+
+export default function DashboardView({
+  initialHabits,
+  initialDeadlines,
+  initialTodayTasks,
+  initialPomodoroSettings,
+}: DashboardViewProps) {
   const [view, setView] = useState<ViewMode>('today');
   const [isCreating, setIsCreating] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState("");
   
-  // Fake streak logic using actual logs array for now (calculating consecutive days backwards from today)
-  const getStreak = (logs: string[]) => {
+  // Keeps streak visible before today's habit is checked.
+  const getStreak = (logs: string[] = []) => {
+    if (!Array.isArray(logs) || logs.length === 0) return 0;
+
+    const uniqueLogs = new Set(logs);
+    const today = new Date();
+    const todayIso = format(today, 'yyyy-MM-dd');
+
+    const d = new Date(today);
+    if (!uniqueLogs.has(todayIso)) {
+      d.setDate(d.getDate() - 1);
+    }
+
     let streak = 0;
-    let d = new Date();
     while (true) {
-      if (logs?.includes(format(d, 'yyyy-MM-dd'))) {
+      if (uniqueLogs.has(format(d, 'yyyy-MM-dd'))) {
         streak++;
         d.setDate(d.getDate() - 1);
       } else {
         break;
       }
     }
-    return Math.max(streak, 0);
+    return streak;
   };
 
-  const handleCreateHabit = async (e: React.FormEvent) => {
+  const handleCreateHabit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newHabitTitle.trim()) return;
     await createHabit(newHabitTitle, "focus");
@@ -119,6 +145,12 @@ export default function DashboardView({ initialHabits }: { initialHabits: any[] 
                     <span className="font-medium tracking-wide text-sm">Initialize New Protocol</span>
                   </motion.button>
                 )}
+
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+                  <DeadlineTracker initialItems={initialDeadlines} />
+                  <TodayTasks initialTasks={initialTodayTasks} />
+                  <PomodoroTimer initialSettings={initialPomodoroSettings} />
+                </div>
               </motion.div>
             )}
 
