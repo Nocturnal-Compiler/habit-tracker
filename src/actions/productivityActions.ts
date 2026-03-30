@@ -88,6 +88,7 @@ export async function createDeadline(title: string, dueDate: string): Promise<De
   });
 
   revalidatePath("/");
+  revalidatePath("/deadlines");
   return serializeDeadline(created);
 }
 
@@ -102,6 +103,7 @@ export async function toggleDeadline(deadlineId: string): Promise<DeadlineItem> 
   await deadline.save();
 
   revalidatePath("/");
+  revalidatePath("/deadlines");
   return serializeDeadline(deadline);
 }
 
@@ -112,6 +114,7 @@ export async function deleteDeadline(deadlineId: string) {
   await Deadline.deleteOne({ _id: deadlineId, userId });
 
   revalidatePath("/");
+  revalidatePath("/deadlines");
   return { success: true };
 }
 
@@ -138,6 +141,7 @@ export async function createTodayTask(text: string): Promise<TodayTaskItem> {
   });
 
   revalidatePath("/");
+  revalidatePath("/today-tasks");
   return serializeTodayTask(created);
 }
 
@@ -152,6 +156,7 @@ export async function toggleTodayTask(taskId: string): Promise<TodayTaskItem> {
   await task.save();
 
   revalidatePath("/");
+  revalidatePath("/today-tasks");
   return serializeTodayTask(task);
 }
 
@@ -162,6 +167,7 @@ export async function deleteTodayTask(taskId: string) {
   await TodayTask.deleteOne({ _id: taskId, userId });
 
   revalidatePath("/");
+  revalidatePath("/today-tasks");
   return { success: true };
 }
 
@@ -201,6 +207,7 @@ export async function savePomodoroSettings(
   );
 
   revalidatePath("/");
+  revalidatePath("/pomodoro");
 
   return {
     focusMinutes: settings.focusMinutes,

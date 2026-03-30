@@ -1,11 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Pause, Play, RotateCcw, Timer } from "lucide-react";
+import { ArrowUpRight, Pause, Play, RotateCcw, Timer } from "lucide-react";
 import { savePomodoroSettings, type PomodoroSettings } from "@/actions/productivityActions";
+import { cn } from "@/lib/utils";
 
 type SessionMode = "focus" | "break";
+
+type PomodoroTimerProps = {
+  initialSettings: PomodoroSettings;
+  variant?: "widget" | "page";
+};
 
 function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -13,7 +20,8 @@ function formatClock(totalSeconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export default function PomodoroTimer({ initialSettings }: { initialSettings: PomodoroSettings }) {
+export default function PomodoroTimer({ initialSettings, variant = "widget" }: PomodoroTimerProps) {
+  const isWidget = variant === "widget";
   const [focusMinutes, setFocusMinutes] = useState(initialSettings.focusMinutes);
   const [breakMinutes, setBreakMinutes] = useState(initialSettings.breakMinutes);
   const [mode, setMode] = useState<SessionMode>("focus");
@@ -84,14 +92,36 @@ export default function PomodoroTimer({ initialSettings }: { initialSettings: Po
       transition={{ duration: 0.35, ease: "easeOut", delay: 0.06 }}
       className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-5 md:p-6 space-y-4"
     >
-      <div className="flex items-center gap-2.5">
-        <Timer className="w-4 h-4 text-zinc-300" />
-        <h3 className="text-sm md:text-base font-semibold tracking-wide text-zinc-100">Pomodoro Timer</h3>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Timer className="w-4 h-4 text-zinc-300" />
+          <h3 className="text-sm md:text-base font-semibold tracking-wide text-zinc-100">Pomodoro Timer</h3>
+        </div>
+
+        {isWidget ? (
+          <Link
+            href="/pomodoro"
+            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
+          >
+            Open
+            <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
+          >
+            Back To Daily Flow
+          </Link>
+        )}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-center space-y-2">
         <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">{mode === "focus" ? "Focus Session" : "Break Session"}</p>
-        <p className="text-4xl font-bold tracking-tight text-white tabular-nums">{formatClock(secondsLeft)}</p>
+        <p className={cn(
+          "font-bold tracking-tight text-white tabular-nums",
+          isWidget ? "text-4xl" : "text-5xl"
+        )}>{formatClock(secondsLeft)}</p>
 
         <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
           <div

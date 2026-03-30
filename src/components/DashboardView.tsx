@@ -147,9 +147,9 @@ export default function DashboardView({
                 )}
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
-                  <DeadlineTracker initialItems={initialDeadlines} />
-                  <TodayTasks initialTasks={initialTodayTasks} />
-                  <PomodoroTimer initialSettings={initialPomodoroSettings} />
+                  <DeadlineTracker initialItems={initialDeadlines} variant="widget" />
+                  <TodayTasks initialTasks={initialTodayTasks} variant="widget" />
+                  <PomodoroTimer initialSettings={initialPomodoroSettings} variant="widget" />
                 </div>
               </motion.div>
             )}

@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Check, Flag, Plus, Trash2 } from "lucide-react";
+import { ArrowUpRight, Check, Flag, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { differenceInCalendarDays, format, parseISO, startOfDay } from "date-fns";
 import {
@@ -11,6 +12,11 @@ import {
   toggleDeadline,
   type DeadlineItem,
 } from "@/actions/productivityActions";
+
+type DeadlineTrackerProps = {
+  initialItems: DeadlineItem[];
+  variant?: "widget" | "page";
+};
 
 function getDeadlineStatus(dueDate: string, completed: boolean) {
   if (completed) return "Completed";
@@ -26,18 +32,38 @@ function getDeadlineStatus(dueDate: string, completed: boolean) {
   return `${overdueDays} day${overdueDays === 1 ? "" : "s"} overdue`;
 }
 
-export default function DeadlineTracker({ initialItems }: { initialItems: DeadlineItem[] }) {
+export default function DeadlineTracker({ initialItems, variant = "widget" }: DeadlineTrackerProps) {
+  const isWidget = variant === "widget";
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [items, setItems] = useState<DeadlineItem[]>(initialItems);
   const [isMutating, setIsMutating] = useState(false);
 
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      return a.dueDate.localeCompare(b.dueDate);
-    });
+  const { upcomingItems, overdueItems, completedItems } = useMemo(() => {
+    const today = startOfDay(new Date());
+
+    const upcoming = items
+      .filter((item) => !item.completed)
+      .filter((item) => differenceInCalendarDays(startOfDay(parseISO(item.dueDate)), today) >= 0)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    const overdue = items
+      .filter((item) => !item.completed)
+      .filter((item) => differenceInCalendarDays(startOfDay(parseISO(item.dueDate)), today) < 0)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    const completed = items
+      .filter((item) => item.completed)
+      .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+
+    return {
+      upcomingItems: upcoming,
+      overdueItems: overdue,
+      completedItems: completed,
+    };
   }, [items]);
+
+  const featuredUpcoming = isWidget ? upcomingItems.slice(0, 4) : upcomingItems;
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -90,87 +116,186 @@ export default function DeadlineTracker({ initialItems }: { initialItems: Deadli
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-5 md:p-6 space-y-4"
+      className={cn(
+        "rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-5 md:p-6 space-y-4",
+        isWidget ? "min-h-[23rem]" : ""
+      )}
     >
-      <div className="flex items-center gap-2.5">
-        <Flag className="w-4 h-4 text-zinc-300" />
-        <h3 className="text-sm md:text-base font-semibold tracking-wide text-zinc-100">Deadline Tracker</h3>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Flag className="w-4 h-4 text-zinc-300" />
+          <div>
+            <h3 className="text-sm md:text-base font-semibold tracking-wide text-zinc-100">
+              {isWidget ? "Upcoming Deadlines" : "Deadline Tracker"}
+            </h3>
+            <p className="text-xs text-zinc-500">
+              {upcomingItems.length} upcoming{overdueItems.length > 0 ? ` • ${overdueItems.length} overdue` : ""}
+            </p>
+          </div>
+        </div>
+
+        {isWidget ? (
+          <Link
+            href="/deadlines"
+            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
+          >
+            Open
+            <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
+          >
+            Back To Daily Flow
+          </Link>
+        )}
       </div>
 
-      <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add deadline..."
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
-        />
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
-        />
-        <button
-          type="submit"
-          disabled={isMutating}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add
-        </button>
-      </form>
+      {!isWidget && (
+        <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Add deadline..."
+            className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
+          />
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
+          />
+          <button
+            type="submit"
+            disabled={isMutating}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </form>
+      )}
 
-      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-        {sortedItems.length === 0 ? (
-          <p className="text-xs text-zinc-500">No deadlines yet.</p>
-        ) : (
-          sortedItems.map((item) => (
-            <div
-              key={item.id}
-              className={cn(
-                "flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 transition-colors",
-                item.completed ? "border-white/10 bg-white/[0.02]" : "border-white/10 bg-black/30"
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => toggleCompleted(item.id)}
-                className="flex items-center gap-2 min-w-0 text-left"
+      <div className="space-y-4">
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+          {!isWidget && <p className="text-[11px] uppercase tracking-wider text-zinc-500">Upcoming</p>}
+          {featuredUpcoming.length === 0 ? (
+            <p className="text-xs text-zinc-500">No upcoming deadlines.</p>
+          ) : (
+            featuredUpcoming.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 transition-colors"
               >
-                <span
-                  className={cn(
-                    "h-4 w-4 rounded border flex items-center justify-center",
-                    item.completed ? "border-white bg-white text-black" : "border-white/20"
-                  )}
+                <button
+                  type="button"
+                  onClick={() => toggleCompleted(item.id)}
+                  className="flex items-center gap-2 min-w-0 text-left"
                 >
-                  {item.completed && <Check className="h-3 w-3" />}
-                </span>
-                <span className="min-w-0">
-                  <span
-                    className={cn(
-                      "block text-sm truncate",
-                      item.completed ? "text-zinc-400 line-through" : "text-zinc-200"
-                    )}
-                  >
-                    {item.title}
+                  <span className="h-4 w-4 rounded border border-white/20 flex items-center justify-center">
+                    {item.completed && <Check className="h-3 w-3" />}
                   </span>
-                  <span className="block text-[11px] text-zinc-500">
-                    {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                  <span className="min-w-0">
+                    <span className="block text-sm truncate text-zinc-200">{item.title}</span>
+                    <span className="block text-[11px] text-zinc-500">
+                      {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                    </span>
                   </span>
-                </span>
-              </button>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => removeItem(item.id)}
-                className="text-zinc-500 hover:text-zinc-300 transition-colors"
-                aria-label="Delete deadline"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                {!isWidget && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                    aria-label="Delete deadline"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {!isWidget && overdueItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-wider text-amber-400/80">Overdue</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {overdueItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCompleted(item.id)}
+                    className="flex items-center gap-2 min-w-0 text-left"
+                  >
+                    <span className="h-4 w-4 rounded border border-white/20 flex items-center justify-center">
+                      {item.completed && <Check className="h-3 w-3" />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm truncate text-zinc-200">{item.title}</span>
+                      <span className="block text-[11px] text-zinc-500">
+                        {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                    aria-label="Delete overdue deadline"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-          ))
+          </div>
+        )}
+
+        {!isWidget && completedItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-wider text-zinc-500">Completed</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {completedItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCompleted(item.id)}
+                    className="flex items-center gap-2 min-w-0 text-left"
+                  >
+                    <span className="h-4 w-4 rounded border border-white bg-white text-black flex items-center justify-center">
+                      <Check className="h-3 w-3" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm truncate text-zinc-400 line-through">{item.title}</span>
+                      <span className="block text-[11px] text-zinc-500">
+                        {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                    aria-label="Delete completed deadline"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </motion.section>
