@@ -22,16 +22,24 @@ function formatClock(totalSeconds: number) {
 
 export default function PomodoroTimer({ initialSettings, variant = "widget" }: PomodoroTimerProps) {
   const isWidget = variant === "widget";
-  const [focusMinutes, setFocusMinutes] = useState(initialSettings.focusMinutes);
-  const [breakMinutes, setBreakMinutes] = useState(initialSettings.breakMinutes);
+  const [focusMinutes, setFocusMinutes] = useState(initialSettings.focusMinutes ?? 25);
+  const [breakMinutes, setBreakMinutes] = useState(initialSettings.breakMinutes ?? 5);
+  const [longBreakMinutes, setLongBreakMinutes] = useState(initialSettings.longBreakMinutes ?? 15);
+  const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(initialSettings.sessionsBeforeLongBreak ?? 4);
+  const [autoStartNextSession, setAutoStartNextSession] = useState(initialSettings.autoStartNextSession ?? false);
   const [mode, setMode] = useState<SessionMode>("focus");
   const [isRunning, setIsRunning] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(initialSettings.focusMinutes * 60);
+  const [secondsLeft, setSecondsLeft] = useState((initialSettings.focusMinutes ?? 25) * 60);
   const [isSavingPreset, setIsSavingPreset] = useState(false);
+  const [sessionCount, setSessionCount] = useState(0);
 
   const currentTotalSeconds = useMemo(() => {
-    return (mode === "focus" ? focusMinutes : breakMinutes) * 60;
-  }, [mode, focusMinutes, breakMinutes]);
+    if (mode === "focus") return focusMinutes * 60;
+
+    // If on a break, determine whether this should be a long break
+    const useLong = sessionsBeforeLongBreak > 0 && sessionCount > 0 && sessionCount % sessionsBeforeLongBreak === 0;
+    return (useLong ? longBreakMinutes : breakMinutes) * 60;
+  }, [mode, focusMinutes, breakMinutes, longBreakMinutes, sessionsBeforeLongBreak, sessionCount]);
 
   useEffect(() => {
     if (isRunning) return;
@@ -51,9 +59,32 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
   useEffect(() => {
     if (!isRunning || secondsLeft !== 0) return;
 
-    setIsRunning(false);
-    setMode((prev) => (prev === "focus" ? "break" : "focus"));
-  }, [secondsLeft, isRunning]);
+    // Focus session finished
+    if (mode === "focus") {
+      const nextSessionCount = sessionCount + 1;
+      setSessionCount(nextSessionCount);
+
+      const useLong = sessionsBeforeLongBreak > 0 && nextSessionCount % sessionsBeforeLongBreak === 0;
+      const nextBreakSeconds = (useLong ? longBreakMinutes : breakMinutes) * 60;
+
+      setMode("break");
+      if (autoStartNextSession) {
+        setSecondsLeft(nextBreakSeconds);
+        setIsRunning(true);
+      } else {
+        setIsRunning(false);
+      }
+    } else {
+      // Break finished
+      setMode("focus");
+      if (autoStartNextSession) {
+        setSecondsLeft(focusMinutes * 60);
+        setIsRunning(true);
+      } else {
+        setIsRunning(false);
+      }
+    }
+  }, [secondsLeft, isRunning, mode, sessionCount, sessionsBeforeLongBreak, longBreakMinutes, breakMinutes, focusMinutes, autoStartNextSession]);
 
   const progress = currentTotalSeconds > 0 ? (secondsLeft / currentTotalSeconds) * 100 : 0;
 
@@ -66,11 +97,29 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
 
     setIsSavingPreset(true);
     try {
-      const saved = await savePomodoroSettings(focus, rest);
+      const saved = await savePomodoroSettings(focus, rest, longBreakMinutes, sessionsBeforeLongBreak, autoStartNextSession);
       setFocusMinutes(saved.focusMinutes);
       setBreakMinutes(saved.breakMinutes);
+      setLongBreakMinutes(saved.longBreakMinutes);
+      setSessionsBeforeLongBreak(saved.sessionsBeforeLongBreak);
+      setAutoStartNextSession(saved.autoStartNextSession);
     } catch {
       // Keep local preset even if persistence fails.
+    }
+    setIsSavingPreset(false);
+  };
+
+  const saveSettings = async () => {
+    setIsSavingPreset(true);
+    try {
+      const saved = await savePomodoroSettings(focusMinutes, breakMinutes, longBreakMinutes, sessionsBeforeLongBreak, autoStartNextSession);
+      setFocusMinutes(saved.focusMinutes);
+      setBreakMinutes(saved.breakMinutes);
+      setLongBreakMinutes(saved.longBreakMinutes);
+      setSessionsBeforeLongBreak(saved.sessionsBeforeLongBreak);
+      setAutoStartNextSession(saved.autoStartNextSession);
+    } catch {
+      // ignore failure
     }
     setIsSavingPreset(false);
   };
@@ -149,6 +198,34 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
           50 / 10
         </button>
       </div>
+
+      {!isWidget && (
+        <div className="space-y-3">
+          <h4 className="text-xs uppercase tracking-wider text-zinc-500">Advanced Settings</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label className="text-sm text-zinc-400">Focus (min)
+              <input type="number" min={1} max={180} value={focusMinutes} onChange={(e) => setFocusMinutes(Number(e.target.value))} className="w-full mt-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm" />
+            </label>
+            <label className="text-sm text-zinc-400">Short Break (min)
+              <input type="number" min={1} max={60} value={breakMinutes} onChange={(e) => setBreakMinutes(Number(e.target.value))} className="w-full mt-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm" />
+            </label>
+            <label className="text-sm text-zinc-400">Long Break (min)
+              <input type="number" min={1} max={180} value={longBreakMinutes} onChange={(e) => setLongBreakMinutes(Number(e.target.value))} className="w-full mt-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm" />
+            </label>
+            <label className="text-sm text-zinc-400">Sessions Before Long Break
+              <input type="number" min={1} max={12} value={sessionsBeforeLongBreak} onChange={(e) => setSessionsBeforeLongBreak(Number(e.target.value))} className="w-full mt-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm" />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-400">
+              <input type="checkbox" checked={autoStartNextSession} onChange={(e) => setAutoStartNextSession(Boolean(e.target.checked))} />
+              Auto-start next session
+            </label>
+          </div>
+
+          <div className="mt-2">
+            <button onClick={saveSettings} disabled={isSavingPreset} className="rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm">Save Settings</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2">
         <button

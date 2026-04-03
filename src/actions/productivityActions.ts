@@ -28,6 +28,9 @@ export type TodayTaskItem = {
 export type PomodoroSettings = {
   focusMinutes: number;
   breakMinutes: number;
+  longBreakMinutes: number;
+  sessionsBeforeLongBreak: number;
+  autoStartNextSession: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -174,35 +177,44 @@ export async function deleteTodayTask(taskId: string) {
 export async function getPomodoroSettings(): Promise<PomodoroSettings> {
   const userId = await getOptionalUserId();
   if (!userId) {
-    return { focusMinutes: 25, breakMinutes: 5 };
+    return { focusMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, sessionsBeforeLongBreak: 4, autoStartNextSession: false };
   }
 
   await connectToDatabase();
   const settings = await PomodoroSetting.findOne({ userId }).lean();
 
   if (!settings) {
-    return { focusMinutes: 25, breakMinutes: 5 };
+    return { focusMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, sessionsBeforeLongBreak: 4, autoStartNextSession: false };
   }
 
   return {
     focusMinutes: settings.focusMinutes,
     breakMinutes: settings.breakMinutes,
+    longBreakMinutes: settings.longBreakMinutes ?? 15,
+    sessionsBeforeLongBreak: settings.sessionsBeforeLongBreak ?? 4,
+    autoStartNextSession: Boolean(settings.autoStartNextSession),
   };
 }
 
 export async function savePomodoroSettings(
   focusMinutes: number,
-  breakMinutes: number
+  breakMinutes: number,
+  longBreakMinutes: number = 15,
+  sessionsBeforeLongBreak: number = 4,
+  autoStartNextSession: boolean = false
 ): Promise<PomodoroSettings> {
   const userId = await getRequiredUserId();
 
   const nextFocus = clamp(Math.round(focusMinutes), 1, 180);
   const nextBreak = clamp(Math.round(breakMinutes), 1, 60);
+  const nextLongBreak = clamp(Math.round(longBreakMinutes), 1, 180);
+  const nextSessions = clamp(Math.round(sessionsBeforeLongBreak), 1, 12);
+  const nextAuto = Boolean(autoStartNextSession);
 
   await connectToDatabase();
   const settings = await PomodoroSetting.findOneAndUpdate(
     { userId },
-    { focusMinutes: nextFocus, breakMinutes: nextBreak },
+    { focusMinutes: nextFocus, breakMinutes: nextBreak, longBreakMinutes: nextLongBreak, sessionsBeforeLongBreak: nextSessions, autoStartNextSession: nextAuto },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
@@ -212,5 +224,8 @@ export async function savePomodoroSettings(
   return {
     focusMinutes: settings.focusMinutes,
     breakMinutes: settings.breakMinutes,
+    longBreakMinutes: settings.longBreakMinutes ?? 15,
+    sessionsBeforeLongBreak: settings.sessionsBeforeLongBreak ?? 4,
+    autoStartNextSession: Boolean(settings.autoStartNextSession),
   };
 }

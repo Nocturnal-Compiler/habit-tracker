@@ -77,6 +77,25 @@ export default function TodayTasks({ initialTasks, variant = "widget" }: TodayTa
     setIsMutating(false);
   };
 
+  const clearCompleted = async () => {
+    if (isMutating) return;
+    const doneIds = tasks.filter((t) => t.done).map((t) => t.id);
+    if (doneIds.length === 0) return;
+
+    const previous = tasks;
+    setTasks((prev) => prev.filter((t) => !t.done));
+
+    setIsMutating(true);
+    try {
+      for (const id of doneIds) {
+        await deleteTodayTask(id);
+      }
+    } catch {
+      setTasks(previous);
+    }
+    setIsMutating(false);
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -107,12 +126,22 @@ export default function TodayTasks({ initialTasks, variant = "widget" }: TodayTa
             <ArrowUpRight className="w-3 h-3" />
           </Link>
         ) : (
-          <Link
-            href="/"
-            className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
-          >
-            Back To Daily Flow
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
+            >
+              Back To Daily Flow
+            </Link>
+            <button
+              type="button"
+              onClick={clearCompleted}
+              disabled={isMutating}
+              className="rounded-md border border-emerald-500/10 bg-emerald-500/5 px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+            >
+              Clear Completed
+            </button>
+          </div>
         )}
       </div>
 

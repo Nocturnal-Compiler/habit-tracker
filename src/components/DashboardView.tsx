@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import FluidBackground from "@/components/FluidBackground";
 import HabitCard from "@/components/HabitCard";
-import WeeklyView from "@/components/WeeklyView";
+// WeeklyView removed for overhaul
 import MonthlyView from "@/components/MonthlyView";
 import Sidebar from "@/components/Sidebar";
 import AnimatedTitle from "@/components/AnimatedTitle";
@@ -16,7 +16,7 @@ import { createHabit } from "@/actions/habitActions";
 import { Plus } from "lucide-react";
 import type { DeadlineItem, PomodoroSettings, TodayTaskItem } from "@/actions/productivityActions";
 
-type ViewMode = 'today' | 'weekly' | 'monthly';
+type ViewMode = 'today' | 'monthly';
 
 type DashboardViewProps = {
   initialHabits: any[];
@@ -80,7 +80,7 @@ export default function DashboardView({
         <div className="max-w-5xl mx-auto">
           <header className="mb-16 mt-10">
             <AnimatedTitle 
-              text={view === 'today' ? "Daily Flow" : view === 'weekly' ? "Weekly Node" : "Heatmap Matrix"} 
+              text={view === 'today' ? "Daily Flow" : "Heatmap Matrix"} 
               className="text-5xl md:text-6xl font-extrabold tracking-tighter mb-4 text-white"
             />
             <motion.div
@@ -154,9 +154,7 @@ export default function DashboardView({
               </motion.div>
             )}
 
-            {view === 'weekly' && (
-              <WeeklyView key="weekly" habits={initialHabits} />
-            )}
+            {/* Weekly heatmap removed for overhaul. */}
 
             {view === 'monthly' && (
               <MonthlyView key="monthly" habits={initialHabits} />

@@ -96,6 +96,36 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
     setIsMutating(false);
   };
 
+  const bulkCompleteOverdue = async () => {
+    if (isMutating) return;
+    const ids = overdueItems.filter((i) => !i.completed).map((i) => i.id);
+    if (ids.length === 0) return;
+
+    setIsMutating(true);
+    try {
+      for (const id of ids) {
+        const updated = await toggleDeadline(id);
+        setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      }
+    } catch {
+      // ignore errors
+    }
+    setIsMutating(false);
+  };
+
+  const exportCSV = () => {
+    const header = "Title,Due Date,Completed\n";
+    const rows = items.map((r) => `"${String(r.title).replace(/"/g, '""')}",${r.dueDate},${r.completed ? 'TRUE' : 'FALSE'}`);
+    const csv = header + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "deadlines.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const removeItem = async (id: string) => {
     if (isMutating) return;
 
@@ -143,12 +173,31 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
             <ArrowUpRight className="w-3 h-3" />
           </Link>
         ) : (
-          <Link
-            href="/"
-            className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
-          >
-            Back To Daily Flow
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
+            >
+              Back To Daily Flow
+            </Link>
+
+            <button
+              type="button"
+              onClick={bulkCompleteOverdue}
+              disabled={isMutating}
+              className="rounded-md border border-amber-500/10 bg-amber-500/5 px-2.5 py-1.5 text-xs text-amber-300 hover:bg-amber-500/10 transition-colors"
+            >
+              Mark Overdue Done
+            </button>
+
+            <button
+              type="button"
+              onClick={exportCSV}
+              className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/10 transition-colors"
+            >
+              Export
+            </button>
+          </div>
         )}
       </div>
 

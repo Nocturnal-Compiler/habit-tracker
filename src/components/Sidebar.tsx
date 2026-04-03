@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, useSpring, useMotionValue, useTransform } from "framer-motion";
-import { LayoutDashboard, Calendar, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Calendar, Flag, ClipboardList, Timer, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
@@ -14,10 +15,15 @@ interface SidebarProps {
 export default function Sidebar({ currentView, setView }: SidebarProps) {
   const { data: session } = useSession();
 
+  const pathname = usePathname();
+  const router = useRouter();
+
   const navItems = [
     { id: "today", icon: LayoutDashboard, label: "Daily Flow" },
-    { id: "weekly", icon: BarChart3, label: "Weekly Node" },
     { id: "monthly", icon: Calendar, label: "Heatmap Matrix" },
+    { id: "deadlines", icon: Flag, label: "Deadlines", href: "/deadlines" },
+    { id: "today-tasks", icon: ClipboardList, label: "Today's Tasks", href: "/today-tasks" },
+    { id: "pomodoro", icon: Timer, label: "Pomodoro", href: "/pomodoro" },
   ];
 
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -151,12 +157,12 @@ export default function Sidebar({ currentView, setView }: SidebarProps) {
             <p className="text-xs font-medium text-zinc-600 uppercase tracking-widest pl-2 mb-4">Maps</p>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = currentView === item.id;
-              
+              const isActive = item.href ? pathname?.startsWith(item.href) : currentView === item.id;
+
               return (
                 <button
                   key={item.id}
-                  onClick={() => setView(item.id)}
+                  onClick={() => (item.href ? router.push(item.href) : setView(item.id))}
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 relative group",
                     isActive ? "text-white" : "text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300"
