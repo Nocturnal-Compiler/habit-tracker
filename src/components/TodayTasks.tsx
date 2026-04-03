@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Check, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,15 @@ export default function TodayTasks({ initialTasks, variant = "widget" }: TodayTa
   const [taskInput, setTaskInput] = useState("");
   const [tasks, setTasks] = useState<TodayTaskItem[]>(initialTasks);
   const [isMutating, setIsMutating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [estimateMinutes, setEstimateMinutes] = useState<number>(0);
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [recurring, setRecurring] = useState<"none" | "daily" | "weekly">("none");
+  const [timeOfDay, setTimeOfDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTasks(initialTasks ?? []);
+  }, [initialTasks]);
 
   const orderedTasks = useMemo(
     () => [...tasks].sort((a, b) => Number(a.done) - Number(b.done)),
@@ -37,12 +46,17 @@ export default function TodayTasks({ initialTasks, variant = "widget" }: TodayTa
 
     setIsMutating(true);
     try {
-      const created = await createTodayTask(taskInput);
+      const created = await createTodayTask(taskInput, estimateMinutes, priority, recurring, timeOfDay);
       setTasks((prev) => [...prev, created]);
     } catch {
       // Keep UI stable on server failure.
     }
     setTaskInput("");
+    setEstimateMinutes(0);
+    setPriority("medium");
+    setRecurring("none");
+    setTimeOfDay(null);
+    setShowAdvanced(false);
     setIsMutating(false);
   };
 
@@ -146,23 +160,47 @@ export default function TodayTasks({ initialTasks, variant = "widget" }: TodayTa
       </div>
 
       {!isWidget && (
-        <form onSubmit={handleAddTask} className="flex gap-2">
-          <input
-            type="text"
-            value={taskInput}
-            onChange={(e) => setTaskInput(e.target.value)}
-            placeholder="Add a task for today..."
-            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
-          />
-          <button
-            type="submit"
-            disabled={isMutating}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add
-          </button>
-        </form>
+        <div className="space-y-2">
+          <form onSubmit={handleAddTask} className="flex gap-2">
+            <input
+              type="text"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              placeholder="Add a task for today..."
+              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
+            />
+            <button
+              type="submit"
+              disabled={isMutating}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add
+            </button>
+          </form>
+
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowAdvanced((s) => !s)} className="text-xs text-zinc-400 hover:text-zinc-200">{showAdvanced ? 'Hide options' : 'More options'}</button>
+            <p className="text-xs text-zinc-500">Add estimate, priority or recurring schedule.</p>
+          </div>
+
+          {showAdvanced && (
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <input type="number" min={0} value={estimateMinutes} onChange={(e) => setEstimateMinutes(Number(e.target.value))} placeholder="Estimate (min)" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none" />
+              <select value={priority} onChange={(e) => setPriority(e.target.value as any)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <select value={recurring} onChange={(e) => setRecurring(e.target.value as any)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none">
+                <option value="none">No recurrence</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <input type="time" value={timeOfDay ?? ""} onChange={(e) => setTimeOfDay(e.target.value || null)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none" />
+            </div>
+          )}
+        </div>
       )}
 
       <div className="space-y-2 max-h-56 overflow-y-auto pr-1">

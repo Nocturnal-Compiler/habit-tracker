@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Pause, Play, RotateCcw, Timer } from "lucide-react";
-import { savePomodoroSettings, type PomodoroSettings } from "@/actions/productivityActions";
+import { savePomodoroSettings, createPomodoroPreset, deletePomodoroPreset, logPomodoroSession, type PomodoroSettings } from "@/actions/productivityActions";
 import { cn } from "@/lib/utils";
 
 type SessionMode = "focus" | "break";
@@ -12,6 +12,8 @@ type SessionMode = "focus" | "break";
 type PomodoroTimerProps = {
   initialSettings: PomodoroSettings;
   variant?: "widget" | "page";
+  initialPresets?: Array<any>;
+  initialSessions?: Array<any>;
 };
 
 function formatClock(totalSeconds: number) {
@@ -20,7 +22,7 @@ function formatClock(totalSeconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export default function PomodoroTimer({ initialSettings, variant = "widget" }: PomodoroTimerProps) {
+export default function PomodoroTimer({ initialSettings, variant = "widget", initialPresets, initialSessions }: PomodoroTimerProps) {
   const isWidget = variant === "widget";
   const [focusMinutes, setFocusMinutes] = useState(initialSettings.focusMinutes ?? 25);
   const [breakMinutes, setBreakMinutes] = useState(initialSettings.breakMinutes ?? 5);
@@ -32,6 +34,8 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
   const [secondsLeft, setSecondsLeft] = useState((initialSettings.focusMinutes ?? 25) * 60);
   const [isSavingPreset, setIsSavingPreset] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
+  const [presets, setPresets] = useState<Array<any>>(initialSettings ? ([] as any) : []);
+  const [sessions, setSessions] = useState<Array<any>>([]);
 
   const currentTotalSeconds = useMemo(() => {
     if (mode === "focus") return focusMinutes * 60;
@@ -59,6 +63,16 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
   useEffect(() => {
     if (!isRunning || secondsLeft !== 0) return;
 
+    // Log the finished session to server (best-effort)
+    (async () => {
+      try {
+        const logged = await logPomodoroSession(mode, currentTotalSeconds);
+        setSessions((s) => [logged, ...s].slice(0, 50));
+      } catch {
+        // ignore logging failures
+      }
+    })();
+
     // Focus session finished
     if (mode === "focus") {
       const nextSessionCount = sessionCount + 1;
@@ -84,7 +98,7 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
         setIsRunning(false);
       }
     }
-  }, [secondsLeft, isRunning, mode, sessionCount, sessionsBeforeLongBreak, longBreakMinutes, breakMinutes, focusMinutes, autoStartNextSession]);
+  }, [secondsLeft, isRunning, mode, sessionCount, sessionsBeforeLongBreak, longBreakMinutes, breakMinutes, focusMinutes, autoStartNextSession, currentTotalSeconds]);
 
   const progress = currentTotalSeconds > 0 ? (secondsLeft / currentTotalSeconds) * 100 : 0;
 
@@ -122,6 +136,34 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
       // ignore failure
     }
     setIsSavingPreset(false);
+  };
+
+  // Preset management
+  useEffect(() => {
+    if (initialPresets && Array.isArray(initialPresets)) setPresets(initialPresets);
+    if (initialSessions && Array.isArray(initialSessions)) setSessions(initialSessions);
+  }, [initialPresets, initialSessions]);
+
+  const savePreset = async () => {
+    const name = window.prompt("Preset name:");
+    if (!name) return;
+    setIsSavingPreset(true);
+    try {
+      const created = await createPomodoroPreset(name, focusMinutes, breakMinutes, longBreakMinutes, sessionsBeforeLongBreak);
+      setPresets((p) => [created, ...p]);
+    } catch {
+      // ignore
+    }
+    setIsSavingPreset(false);
+  };
+
+  const removePreset = async (id: string) => {
+    try {
+      await deletePomodoroPreset(id);
+      setPresets((p) => p.filter((x) => x.id !== id));
+    } catch {
+      // ignore
+    }
   };
 
   const resetTimer = () => {
@@ -223,6 +265,36 @@ export default function PomodoroTimer({ initialSettings, variant = "widget" }: P
 
           <div className="mt-2">
             <button onClick={saveSettings} disabled={isSavingPreset} className="rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm">Save Settings</button>
+          </div>
+        </div>
+      )}
+
+      {!isWidget && (
+        <div className="space-y-3">
+          <h4 className="text-xs uppercase tracking-wider text-zinc-500">Presets</h4>
+          <div className="flex gap-2 flex-wrap">
+            {presets.length === 0 && <p className="text-xs text-zinc-500">No presets yet.</p>}
+            {presets.map((p) => (
+              <div key={p.id} className="flex items-center gap-2">
+                <button onClick={() => applyPreset(p.focusMinutes, p.breakMinutes)} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs">{p.name}</button>
+                <button onClick={() => removePreset(p.id)} className="text-xs text-zinc-500">Delete</button>
+              </div>
+            ))}
+
+            <button onClick={savePreset} disabled={isSavingPreset} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs">Save Preset</button>
+          </div>
+
+          <div>
+            <h4 className="text-xs uppercase tracking-wider text-zinc-500">Recent Sessions</h4>
+            <div className="space-y-1 max-h-40 overflow-y-auto mt-2">
+              {sessions.length === 0 && <p className="text-xs text-zinc-500">No sessions logged yet.</p>}
+              {sessions.map((s) => (
+                <div key={s.id} className="flex items-center justify-between text-xs text-zinc-400">
+                  <div>{s.mode === 'focus' ? 'Focus' : 'Break'} • {Math.round((s.durationSeconds || 0) / 60)}m</div>
+                  <div className="text-[11px] text-zinc-500">{new Date(s.completedAt).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

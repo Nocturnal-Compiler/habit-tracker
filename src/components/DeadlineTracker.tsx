@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Check, Flag, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,15 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
   const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [items, setItems] = useState<DeadlineItem[]>(initialItems);
   const [isMutating, setIsMutating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [tagsInput, setTagsInput] = useState("");
+  const [categoryInput, setCategoryInput] = useState<string | null>(null);
+  const [reminderAt, setReminderAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(initialItems ?? []);
+  }, [initialItems]);
 
   const { upcomingItems, overdueItems, completedItems } = useMemo(() => {
     const today = startOfDay(new Date());
@@ -71,12 +80,18 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
 
     setIsMutating(true);
     try {
-      const created = await createDeadline(title, dueDate);
+      const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
+      const created = await createDeadline(title, dueDate, priority, tags, reminderAt, categoryInput);
       setItems((prev) => [...prev, created]);
     } catch {
       // Keep UI stable on server failure.
     }
     setTitle("");
+    setTagsInput("");
+    setCategoryInput(null);
+    setReminderAt(null);
+    setPriority("medium");
+    setShowAdvanced(false);
     setIsMutating(false);
   };
 
@@ -202,28 +217,48 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
       </div>
 
       {!isWidget && (
-        <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Add deadline..."
-            className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
-          />
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
-          />
-          <button
-            type="submit"
-            disabled={isMutating}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add
-          </button>
+        <form onSubmit={handleAdd} className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Add deadline..."
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
+            />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30"
+            />
+            <button
+              type="submit"
+              disabled={isMutating}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/10 hover:bg-white/20 px-3 py-2 text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowAdvanced((s) => !s)} className="text-xs text-zinc-400 hover:text-zinc-200">{showAdvanced ? 'Hide options' : 'More options'}</button>
+            <p className="text-xs text-zinc-500">Tip: use More options to add tags, category or reminder.</p>
+          </div>
+
+          {showAdvanced && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <select value={priority} onChange={(e) => setPriority(e.target.value as any)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none">
+                <option value="low">Low priority</option>
+                <option value="medium">Medium priority</option>
+                <option value="high">High priority</option>
+              </select>
+              <input type="text" value={categoryInput ?? ''} onChange={(e) => setCategoryInput(e.target.value)} placeholder="Category (optional)" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none" />
+              <input type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="Tags (comma separated)" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none" />
+              <input type="datetime-local" value={reminderAt ?? ''} onChange={(e) => setReminderAt(e.target.value || null)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none" />
+            </div>
+          )}
         </form>
       )}
 

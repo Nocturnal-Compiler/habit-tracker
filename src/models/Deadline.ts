@@ -5,6 +5,10 @@ export interface IDeadline extends Document {
   title: string;
   dueDate: string; // yyyy-MM-dd
   completed: boolean;
+  priority?: "low" | "medium" | "high";
+  tags?: string[];
+  reminderAt?: Date | null;
+  category?: string | null;
 }
 
 const DeadlineSchema = new mongoose.Schema<IDeadline>(
@@ -13,6 +17,10 @@ const DeadlineSchema = new mongoose.Schema<IDeadline>(
     title: { type: String, required: true, trim: true },
     dueDate: { type: String, required: true },
     completed: { type: Boolean, default: false },
+    priority: { type: String, enum: ["low", "medium", "high"], default: "medium" },
+    tags: { type: [String], default: [] },
+    reminderAt: { type: Date, required: false },
+    category: { type: String, required: false },
   },
   { timestamps: true }
 );
