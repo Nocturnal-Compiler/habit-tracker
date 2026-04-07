@@ -6,6 +6,12 @@ export interface IHabit extends Document {
   category: "mind" | "body" | "focus";
   color: string;
   logs: string[]; // array of 'YYYY-MM-DD' dates when the habit was completed
+  priority?: "low" | "medium" | "high";
+  frequencyPerWeek?: number;
+  startDate?: string | null; // yyyy-MM-dd
+  tags?: string[];
+  reminderTime?: string | null; // HH:mm
+  active?: boolean;
 }
 
 const HabitSchema = new mongoose.Schema<IHabit>(
@@ -14,6 +20,12 @@ const HabitSchema = new mongoose.Schema<IHabit>(
     title: { type: String, required: true },
     category: { type: String, enum: ["mind", "body", "focus"], default: "focus" },
     color: { type: String, default: "from-indigo-400 to-cyan-400" },
+    priority: { type: String, enum: ["low", "medium", "high"], default: "medium" },
+    frequencyPerWeek: { type: Number, required: false, default: 7, min: 0, max: 168 },
+    startDate: { type: String, required: false },
+    tags: { type: [String], default: [] },
+    reminderTime: { type: String, required: false },
+    active: { type: Boolean, default: true },
     logs: [{ type: String }],
   },
   { timestamps: true }

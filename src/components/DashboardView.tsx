@@ -34,6 +34,14 @@ export default function DashboardView({
   const [view, setView] = useState<ViewMode>('today');
   const [isCreating, setIsCreating] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState("");
+  const [newCategory, setNewCategory] = useState<string>("focus");
+  const [showAdvancedCreate, setShowAdvancedCreate] = useState(false);
+  const [newPriority, setNewPriority] = useState<"low" | "medium" | "high">("medium");
+  const [newFrequency, setNewFrequency] = useState<number>(7);
+  const [newStartDate, setNewStartDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
+  const [newTags, setNewTags] = useState<string>("");
+  const [newReminderTime, setNewReminderTime] = useState<string | null>(null);
+  const [newColor, setNewColor] = useState<string | null>(null);
   
   // Keeps streak visible before today's habit is checked.
   const getStreak = (logs: string[] = []) => {
@@ -63,8 +71,27 @@ export default function DashboardView({
   const handleCreateHabit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newHabitTitle.trim()) return;
-    await createHabit(newHabitTitle, "focus");
+
+    const tags = newTags.split(',').map(t => t.trim()).filter(Boolean);
+
+    await createHabit(newHabitTitle, newCategory, {
+      priority: newPriority,
+      frequencyPerWeek: newFrequency,
+      startDate: newStartDate,
+      tags,
+      reminderTime: newReminderTime,
+      color: newColor ?? undefined,
+    });
+
     setNewHabitTitle("");
+    setNewCategory("focus");
+    setShowAdvancedCreate(false);
+    setNewPriority("medium");
+    setNewFrequency(7);
+    setNewStartDate(format(new Date(), 'yyyy-MM-dd'));
+    setNewTags("");
+    setNewReminderTime(null);
+    setNewColor(null);
     setIsCreating(false);
   };
 
@@ -121,18 +148,50 @@ export default function DashboardView({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onSubmit={handleCreateHabit} 
-                    className="p-4 rounded-xl border border-white/5 bg-white/[0.03] backdrop-blur-xl flex gap-4 mt-6"
+                    className="p-4 rounded-xl border border-white/5 bg-white/[0.03] backdrop-blur-xl mt-6"
                   >
-                    <input 
-                      autoFocus
-                      type="text" 
-                      value={newHabitTitle}
-                      onChange={(e) => setNewHabitTitle(e.target.value)}
-                      placeholder="Enter new protocol..." 
-                      className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2 outline-none focus:border-white/50 transition-all font-mono text-sm"
-                    />
-                    <button type="submit" className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-lg transition-all border border-white/10 text-sm">Add</button>
-                    <button type="button" onClick={() => setIsCreating(false)} className="text-zinc-500 hover:text-zinc-300 px-2 text-sm">Cancel</button>
+                    <div className="flex gap-4">
+                      <input 
+                        autoFocus
+                        type="text" 
+                        value={newHabitTitle}
+                        onChange={(e) => setNewHabitTitle(e.target.value)}
+                        placeholder="Enter new protocol..." 
+                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2 outline-none focus:border-white/50 transition-all font-mono text-sm"
+                      />
+                      <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm">
+                        <option value="focus">Focus</option>
+                        <option value="mind">Mind</option>
+                        <option value="body">Body</option>
+                      </select>
+                      <button type="submit" className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-lg transition-all border border-white/10 text-sm">Add</button>
+                      <button type="button" onClick={() => setIsCreating(false)} className="text-zinc-500 hover:text-zinc-300 px-2 text-sm">Cancel</button>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <button type="button" onClick={() => setShowAdvancedCreate(s => !s)} className="text-xs text-zinc-400">{showAdvancedCreate ? 'Hide options' : 'More options'}</button>
+                      <p className="text-xs text-zinc-500">You can set priority, weekly frequency, tags, reminder, and color.</p>
+                    </div>
+
+                    {showAdvancedCreate && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                        <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as any)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm">
+                          <option value="low">Low priority</option>
+                          <option value="medium">Medium priority</option>
+                          <option value="high">High priority</option>
+                        </select>
+
+                        <input type="number" min={0} max={168} value={newFrequency} onChange={(e) => setNewFrequency(Number(e.target.value))} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Times per week" />
+
+                        <input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm" />
+
+                        <input type="text" value={newTags} onChange={(e) => setNewTags(e.target.value)} placeholder="Tags (comma separated)" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm" />
+
+                        <input type="time" value={newReminderTime ?? ''} onChange={(e) => setNewReminderTime(e.target.value || null)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm" />
+
+                        <input type="text" value={newColor ?? ''} onChange={(e) => setNewColor(e.target.value || null)} placeholder="Color CSS (optional)" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm" />
+                      </div>
+                    )}
                   </motion.form>
                 ) : (
                   <motion.button 

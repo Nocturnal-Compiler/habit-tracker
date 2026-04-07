@@ -23,7 +23,16 @@ export async function getHabits() {
   }));
 }
 
-export async function createHabit(title: string, category: string) {
+export type CreateHabitOptions = {
+  priority?: "low" | "medium" | "high";
+  frequencyPerWeek?: number;
+  startDate?: string | null; // yyyy-MM-dd
+  tags?: string[];
+  reminderTime?: string | null; // HH:mm
+  color?: string | null;
+};
+
+export async function createHabit(title: string, category: string, options: CreateHabitOptions = {}) {
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Unauthorized");
 
@@ -34,7 +43,14 @@ export async function createHabit(title: string, category: string) {
     userId,
     title,
     category,
-    logs: []
+    color: options.color ?? undefined,
+    priority: options.priority ?? undefined,
+    frequencyPerWeek: typeof options.frequencyPerWeek === "number" ? options.frequencyPerWeek : undefined,
+    startDate: options.startDate ?? undefined,
+    tags: Array.isArray(options.tags) ? options.tags : [],
+    reminderTime: options.reminderTime ?? undefined,
+    logs: [],
+    active: true,
   });
 
   revalidatePath("/");
