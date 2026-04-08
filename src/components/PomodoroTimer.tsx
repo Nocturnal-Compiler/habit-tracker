@@ -47,11 +47,12 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
     return (useLong ? longBreakMinutes : breakMinutes) * 60;
   }, [mode, focusMinutes, breakMinutes, longBreakMinutes, sessionsBeforeLongBreak, sessionCount]);
 
+  // Track changes to currentTotalSeconds to appropriately update secondsLeft exclusively when not running, without resetting on pause.
   useEffect(() => {
     if (isRunning) return;
     setSecondsLeft(currentTotalSeconds);
     setTargetEndTime(null);
-  }, [currentTotalSeconds, isRunning]);
+  }, [currentTotalSeconds]); // Intentionally omitting isRunning so pausing doesn't reset time
 
   useEffect(() => {
     if (!isRunning) return;
