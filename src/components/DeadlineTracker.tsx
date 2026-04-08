@@ -286,6 +286,13 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
                     <span className="block text-[11px] text-zinc-500">
                       {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
                     </span>
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {item.tags.map((tag) => (
+                          <span key={tag} className="text-[11px] text-zinc-300 bg-white/5 px-2 py-0.5 rounded-full">{tag}</span>
+                        ))}
+                      </div>
+                    )}
                   </span>
                 </button>
 
@@ -323,10 +330,17 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
                     </span>
                     <span className="min-w-0">
                       <span className="block text-sm truncate text-zinc-200">{item.title}</span>
-                      <span className="block text-[11px] text-zinc-500">
-                        {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                        <span className="block text-[11px] text-zinc-500">
+                          {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
+                        </span>
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            {item.tags.map((tag) => (
+                              <span key={tag} className="text-[11px] text-zinc-300 bg-white/5 px-2 py-0.5 rounded-full">{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </span>
-                    </span>
                   </button>
 
                   <button
@@ -365,6 +379,13 @@ export default function DeadlineTracker({ initialItems, variant = "widget" }: De
                       <span className="block text-[11px] text-zinc-500">
                         {format(parseISO(item.dueDate), "MMM d, yyyy")} • {getDeadlineStatus(item.dueDate, item.completed)}
                       </span>
+                      {item.tags && item.tags.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {item.tags.map((tag) => (
+                            <span key={tag} className="text-[11px] text-zinc-300 bg-white/5 px-2 py-0.5 rounded-full">{tag}</span>
+                          ))}
+                        </div>
+                      )}
                     </span>
                   </button>
 
