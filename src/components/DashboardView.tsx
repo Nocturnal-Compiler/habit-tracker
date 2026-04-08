@@ -197,7 +197,7 @@ export default function DashboardView({
                   <motion.button 
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => setIsCreating(true)}
+                    onClick={() => { setIsCreating(true); setShowAdvancedCreate(true); }}
                     className="w-full mt-6 p-4 rounded-xl border border-dashed border-white/10 bg-white/0 hover:bg-white/[0.03] backdrop-blur-sm flex items-center justify-center gap-3 text-zinc-500 hover:text-zinc-300 transition-all group"
                   >
                     <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
