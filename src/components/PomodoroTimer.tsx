@@ -34,8 +34,10 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
   const [secondsLeft, setSecondsLeft] = useState((initialSettings.focusMinutes ?? 25) * 60);
   const [isSavingPreset, setIsSavingPreset] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
-  const [presets, setPresets] = useState<Array<any>>(initialSettings ? ([] as any) : []);
-  const [sessions, setSessions] = useState<Array<any>>([]);
+  const [sessionName, setSessionName] = useState("");
+  const [presets, setPresets] = useState<Array<any>>(initialPresets && Array.isArray(initialPresets) ? initialPresets : []);
+  const [sessions, setSessions] = useState<Array<any>>(initialSessions && Array.isArray(initialSessions) ? initialSessions : []);
+  const [targetEndTime, setTargetEndTime] = useState<number | null>(null);
 
   const currentTotalSeconds = useMemo(() => {
     if (mode === "focus") return focusMinutes * 60;
@@ -48,25 +50,43 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
   useEffect(() => {
     if (isRunning) return;
     setSecondsLeft(currentTotalSeconds);
+    setTargetEndTime(null);
   }, [currentTotalSeconds, isRunning]);
 
   useEffect(() => {
     if (!isRunning) return;
 
+    if (!targetEndTime) {
+      setTargetEndTime(Date.now() + secondsLeft * 1000);
+    }
+
     const timer = setInterval(() => {
-      setSecondsLeft((prev) => Math.max(prev - 1, 0));
-    }, 1000);
+      if (!targetEndTime) return;
+      const now = Date.now();
+      const remaining = Math.round((targetEndTime - now) / 1000);
+      setSecondsLeft(Math.max(remaining, 0));
+    }, 500); // 500ms to keep it snappy and responsive even with minor drift
 
     return () => clearInterval(timer);
-  }, [isRunning]);
+  }, [isRunning, targetEndTime]);
+
+  // Document Title Effect
+  useEffect(() => {
+    if (!isRunning) {
+      document.title = "Habit Tracker";
+      return;
+    }
+    const modeLabel = mode === "focus" ? "Focus" : "Break";
+    document.title = `(${formatClock(secondsLeft)}) ${modeLabel} | Habit Tracker`;
+  }, [secondsLeft, isRunning, mode]);
 
   useEffect(() => {
-    if (!isRunning || secondsLeft !== 0) return;
+    if (!isRunning || secondsLeft > 0) return;
 
     // Log the finished session to server (best-effort)
     (async () => {
       try {
-        const logged = await logPomodoroSession(mode, currentTotalSeconds);
+        const logged = await logPomodoroSession(mode, currentTotalSeconds, mode === "focus" ? sessionName : undefined);
         setSessions((s) => [logged, ...s].slice(0, 50));
       } catch {
         // ignore logging failures
@@ -84,23 +104,39 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
       setMode("break");
       if (autoStartNextSession) {
         setSecondsLeft(nextBreakSeconds);
+        setTargetEndTime(Date.now() + nextBreakSeconds * 1000);
         setIsRunning(true);
       } else {
         setIsRunning(false);
+        setTargetEndTime(null);
       }
     } else {
       // Break finished
       setMode("focus");
       if (autoStartNextSession) {
         setSecondsLeft(focusMinutes * 60);
+        setTargetEndTime(Date.now() + focusMinutes * 60 * 1000);
         setIsRunning(true);
       } else {
         setIsRunning(false);
+        setTargetEndTime(null);
       }
     }
-  }, [secondsLeft, isRunning, mode, sessionCount, sessionsBeforeLongBreak, longBreakMinutes, breakMinutes, focusMinutes, autoStartNextSession, currentTotalSeconds]);
+  }, [secondsLeft, isRunning]);
 
-  const progress = currentTotalSeconds > 0 ? (secondsLeft / currentTotalSeconds) * 100 : 0;
+  const progress = currentTotalSeconds > 0 ? ((currentTotalSeconds - secondsLeft) / currentTotalSeconds) * 100 : 0;
+
+  const toggleRunning = () => {
+    if (!isRunning) {
+      // Starting
+      setTargetEndTime(Date.now() + secondsLeft * 1000);
+      setIsRunning(true);
+    } else {
+      // Pausing
+      setIsRunning(false);
+      setTargetEndTime(null);
+    }
+  };
 
   const applyPreset = async (focus: number, rest: number) => {
     if (isSavingPreset) return;
@@ -168,12 +204,22 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
 
   const resetTimer = () => {
     setIsRunning(false);
+    setTargetEndTime(null);
     setSecondsLeft(currentTotalSeconds);
   };
 
   const skipSession = () => {
     setIsRunning(false);
+    setTargetEndTime(null);
     setMode((prev) => (prev === "focus" ? "break" : "focus"));
+  };
+
+  // Allow detaching window via proper HTML5 picture in picture via document (if Chrome allows, or simple open)
+  const openDetachedWindow = () => {
+    // Check if the current environment supports window.open efficiently (or simply inform the user to use "Tab tear-off").
+    // The most reliable detachable window is window.open
+    const features = "width=400,height=300,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes";
+    window.open("/pomodoro", "_blank", features);
   };
 
   return (
@@ -190,33 +236,90 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
         </div>
 
         {isWidget ? (
-          <Link
-            href="/pomodoro"
-            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
-          >
-            Open
-            <ArrowUpRight className="w-3 h-3" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openDetachedWindow}
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
+              title="Open detached timer window"
+            >
+              Detach
+            </button>
+            <Link
+              href="/pomodoro"
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
+            >
+              Open
+              <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
         ) : (
-          <Link
-            href="/"
-            className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
-          >
-            Back To Daily Flow
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openDetachedWindow}
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-200 transition-colors"
+              title="Open detached timer window"
+            >
+              Detach
+            </button>
+            <Link
+              href="/"
+              className="rounded-md border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition-colors"
+            >
+              Back To Daily Flow
+            </Link>
+          </div>
         )}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-center space-y-2">
         <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">{mode === "focus" ? "Focus Session" : "Break Session"}</p>
+        
+        {!isWidget && mode === "focus" && (
+          <div className="flex justify-center -mt-1 mb-2">
+            <input 
+              type="text" 
+              placeholder="Name this session... (e.g. Reading, Coding)" 
+              value={sessionName}
+              onChange={e => setSessionName(e.target.value)}
+              disabled={isRunning}
+              className="w-full max-w-[220px] bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-center outline-none focus:border-white/30 disabled:opacity-50 transition-colors"
+            />
+          </div>
+        )}
+
         <p className={cn(
           "font-bold tracking-tight text-white tabular-nums",
           isWidget ? "text-4xl" : "text-5xl"
         )}>{formatClock(secondsLeft)}</p>
 
-        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={toggleRunning}
+            className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full border border-white/10 bg-white hover:bg-white/90 text-black transition-colors"
+          >
+            {isRunning ? <Pause className="w-4 h-4 md:w-5 md:h-5 fill-black" /> : <Play className="w-4 h-4 md:w-5 md:h-5 fill-black ml-1" />}
+          </button>
+          
+          <button
+            title="Reset Session"
+            onClick={resetTimer}
+            className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={skipSession}
+            title="Skip Session"
+            className="flex items-center justify-center h-10 px-4 md:h-12 md:px-5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold uppercase tracking-wider text-white transition-colors"
+          >
+            Skip
+          </button>
+        </div>
+
+        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden mt-4">
           <div
-            className="h-full bg-zinc-200/80 transition-all duration-500"
+            className="h-full bg-zinc-200/80 transition-all duration-300"
             style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
           />
         </div>
@@ -286,12 +389,15 @@ export default function PomodoroTimer({ initialSettings, variant = "widget", ini
 
           <div>
             <h4 className="text-xs uppercase tracking-wider text-zinc-500">Recent Sessions</h4>
-            <div className="space-y-1 max-h-40 overflow-y-auto mt-2">
+            <div className="space-y-2 max-h-40 overflow-y-auto mt-2">
               {sessions.length === 0 && <p className="text-xs text-zinc-500">No sessions logged yet.</p>}
               {sessions.map((s) => (
-                <div key={s.id} className="flex items-center justify-between text-xs text-zinc-400">
-                  <div>{s.mode === 'focus' ? 'Focus' : 'Break'} • {Math.round((s.durationSeconds || 0) / 60)}m</div>
-                  <div className="text-[11px] text-zinc-500">{new Date(s.completedAt).toLocaleString()}</div>
+                <div key={s.id} className="flex flex-col gap-1 rounded-xl border border-white/5 bg-white/[0.02] p-2 text-xs transition-colors text-zinc-400">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-zinc-300">{s.mode === 'focus' ? 'Focus' : 'Break'} • {Math.round((s.durationSeconds || 0) / 60)}m</div>
+                    <div className="text-[11px] text-zinc-500">{new Date(s.completedAt).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                  </div>
+                  {s.name && <div className="text-[11px] text-zinc-500 italic max-w-[200px] truncate" title={s.name}>"{s.name}"</div>}
                 </div>
               ))}
             </div>

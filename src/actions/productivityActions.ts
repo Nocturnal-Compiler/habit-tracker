@@ -335,6 +335,7 @@ function serializeSession(item: any) {
     id: item._id.toString(),
     mode: item.mode,
     durationSeconds: item.durationSeconds,
+    name: item.name || null,
     completedAt: item.completedAt ? new Date(item.completedAt).toISOString() : null,
   };
 }
@@ -381,10 +382,10 @@ export async function deletePomodoroPreset(presetId: string) {
   return { success: true };
 }
 
-export async function logPomodoroSession(mode: "focus" | "break", durationSeconds: number) {
+export async function logPomodoroSession(mode: "focus" | "break", durationSeconds: number, name?: string) {
   const userId = await getRequiredUserId();
   await connectToDatabase();
-  const created = await PomodoroSession.create({ userId, mode, durationSeconds, completedAt: new Date() });
+  const created = await PomodoroSession.create({ userId, mode, durationSeconds, name: name?.trim() || undefined, completedAt: new Date() });
   revalidatePath("/pomodoro");
   return serializeSession(created);
 }
