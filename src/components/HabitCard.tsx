@@ -49,8 +49,9 @@ export default function HabitCard({ id, title, streak, initialCompleted = false,
     >
       <button
         onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(id); }}
-        className="absolute left-3 top-3 p-1 rounded-md bg-black/30 hover:bg-red-600 text-red-400 hover:text-white opacity-0 group-hover:opacity-100 transition"
+        className="absolute right-4 top-4 p-1 rounded-md bg-black/30 hover:bg-red-600 text-red-400 hover:text-white opacity-0 group-hover:opacity-100 transition z-20"
         aria-label="Delete habit"
+        title="Delete habit"
       >
         <Trash className="w-4 h-4" />
       </button>
