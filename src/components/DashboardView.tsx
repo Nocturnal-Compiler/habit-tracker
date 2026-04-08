@@ -164,6 +164,7 @@ export default function DashboardView({
                       streak={getStreak(habit.logs)} 
                       initialCompleted={habit.logs?.includes(todayIso)}
                       onDelete={handleDeleteHabit}
+                      tags={habit.tags ?? []}
                     />
                   ))}
                 </div>

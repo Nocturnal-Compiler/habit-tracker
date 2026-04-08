@@ -12,9 +12,10 @@ interface HabitCardProps {
   streak: number;
   initialCompleted?: boolean;
   onDelete?: (id: string) => void;
+  tags?: string[];
 }
 
-export default function HabitCard({ id, title, streak, initialCompleted = false, onDelete }: HabitCardProps) {
+export default function HabitCard({ id, title, streak, initialCompleted = false, onDelete, tags = [] }: HabitCardProps) {
   const [completed, setCompleted] = useState(initialCompleted);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -77,7 +78,7 @@ export default function HabitCard({ id, title, streak, initialCompleted = false,
         </div>
         
         <div className={cn(
-          "h-6 w-6 rounded border flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]",
+          "h-6 w-6 mr-10 rounded border flex items-center justify-center transition-all duration-500 shadow-inner group-hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]",
           completed 
             ? "bg-white border-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
             : "border-white/20 text-transparent bg-black/40"
@@ -85,6 +86,13 @@ export default function HabitCard({ id, title, streak, initialCompleted = false,
           <Check className="w-4 h-4 stroke-[3]" />
         </div>
       </div>
+      {tags && tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2 z-10">
+          {tags.map((t) => (
+            <span key={t} className="text-[11px] text-zinc-300 bg-white/5 px-2 py-1 rounded-full">{t}</span>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
