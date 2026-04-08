@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Trash } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { toggleHabitLog } from "@/actions/habitActions";
@@ -11,9 +11,10 @@ interface HabitCardProps {
   title: string;
   streak: number;
   initialCompleted?: boolean;
+  onDelete?: (id: string) => void;
 }
 
-export default function HabitCard({ id, title, streak, initialCompleted = false }: HabitCardProps) {
+export default function HabitCard({ id, title, streak, initialCompleted = false, onDelete }: HabitCardProps) {
   const [completed, setCompleted] = useState(initialCompleted);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -46,6 +47,14 @@ export default function HabitCard({ id, title, streak, initialCompleted = false 
       )}
       onClick={handleToggle}
     >
+      <button
+        onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(id); }}
+        className="absolute left-3 top-3 p-1 rounded-md bg-black/30 hover:bg-red-600 text-red-400 hover:text-white opacity-0 group-hover:opacity-100 transition"
+        aria-label="Delete habit"
+      >
+        <Trash className="w-4 h-4" />
+      </button>
+
       {/* Aesthetic glowing orb inside the card */}
       <div className={cn(
         "absolute top-0 right-0 w-32 h-32 bg-zinc-300/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2 transition-opacity duration-700",

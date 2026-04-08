@@ -12,7 +12,7 @@ import TodayTasks from "@/components/TodayTasks";
 import PomodoroTimer from "@/components/PomodoroTimer";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import { createHabit } from "@/actions/habitActions";
+import { createHabit, getHabits, deleteHabit } from "@/actions/habitActions";
 import { Plus } from "lucide-react";
 import type { DeadlineItem, PomodoroSettings, TodayTaskItem } from "@/actions/productivityActions";
 
@@ -32,6 +32,7 @@ export default function DashboardView({
   initialPomodoroSettings,
 }: DashboardViewProps) {
   const [view, setView] = useState<ViewMode>('today');
+  const [habits, setHabits] = useState<any[]>(initialHabits);
   const [isCreating, setIsCreating] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newCategory, setNewCategory] = useState<string>("focus");
@@ -82,6 +83,13 @@ export default function DashboardView({
       reminderTime: newReminderTime,
       color: newColor ?? undefined,
     });
+    // Refresh habits list to reflect new habit
+    try {
+      const fresh = await getHabits();
+      setHabits(fresh);
+    } catch (e) {
+      // ignore refresh errors for now
+    }
 
     setNewHabitTitle("");
     setNewCategory("focus");
@@ -93,6 +101,22 @@ export default function DashboardView({
     setNewReminderTime(null);
     setNewColor(null);
     setIsCreating(false);
+  };
+
+  const handleDeleteHabit = async (id: string) => {
+    // Optimistic remove from UI
+    setHabits(prev => prev.filter(h => h._id !== id));
+    try {
+      await deleteHabit(id);
+    } catch (err) {
+      console.error("Failed to delete habit", err);
+      try {
+        const fresh = await getHabits();
+        setHabits(fresh);
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   // We check if today's date is in the logs for initial completed state
@@ -132,13 +156,14 @@ export default function DashboardView({
                 transition={{ duration: 0.4 }}
               >
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  {initialHabits.map((habit) => (
+                  {habits.map((habit) => (
                     <HabitCard 
                       key={habit._id} 
                       id={habit._id}
                       title={habit.title} 
                       streak={getStreak(habit.logs)} 
                       initialCompleted={habit.logs?.includes(todayIso)}
+                      onDelete={handleDeleteHabit}
                     />
                   ))}
                 </div>

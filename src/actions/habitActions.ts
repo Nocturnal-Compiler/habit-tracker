@@ -79,3 +79,15 @@ export async function toggleHabitLog(habitId: string, dateIso: string) {
   revalidatePath("/");
   return { success: true, logs: habit.logs };
 }
+
+export async function deleteHabit(habitId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await connectToDatabase();
+  const userId = (session.user as any).id;
+
+  const removed = await Habit.findOneAndDelete({ _id: habitId, userId });
+  revalidatePath("/");
+  return { success: !!removed };
+}
